@@ -11,7 +11,7 @@ set -vx
 wget -qO- uny.nu/pkg | bash -s buildsys
 
 ### Installing build dependencies
-#unyp install python expat openssl
+unyp install cmake openssl
 
 #pip3_bin=(/uny/pkg/python/*/bin/pip3)
 #"${pip3_bin[0]}" install --upgrade pip
@@ -35,13 +35,13 @@ mkdir -pv /uny/sources
 cd /uny/sources || exit
 
 pkgname="libevent"
-pkggit="https://github.com/libevent/libevent.git refs/tags/*"
+pkggit="https://github.com/libevent/libevent.git refs/tags/release-*-stable"
 gitdepth="--depth=1"
 
 ### Get version info from git remote
 # shellcheck disable=SC2086
-latest_head="$(git ls-remote --refs --tags --sort="v:refname" $pkggit | grep -E "v[0-9.]+$" | tail --lines=1)"
-latest_ver="$(echo "$latest_head" | grep -o "v[0-9.].*" | sed "s|v||")"
+latest_head="$(git ls-remote --refs --tags --sort="v:refname" $pkggit | tail --lines=1)"
+latest_ver="$(echo "$latest_head" | grep -o "release-[0-9.].*" | sed -e "s|release-||" -e "s|-stable||")"
 latest_commit_id="$(echo "$latest_head" | cut --fields=1)"
 
 version_details
@@ -77,11 +77,13 @@ get_include_paths
 
 unset LD_RUN_PATH
 
-./configure \
-    --prefix=/uny/pkg/"$pkgname"/"$pkgver"
+mkdir build
+cd build || exit
+
+cmake -DCMAKE_INSTALL_PREFIX=/uny/pkg/"$pkgname"/"$pkgver" ..
 
 make -j"$(nproc)"
-make -j"$(nproc)" check 
+make -j"$(nproc)" verify
 make -j"$(nproc)" install
 
 ####################################################
